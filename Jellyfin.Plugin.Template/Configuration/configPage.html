@@ -23,7 +23,7 @@
                     <datalist id="UsedTags"></datalist>
                 </div>
                 <div id="TagItems" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(20em, 1fr)); gap: 1em; margin-top: 1em"></div>
-                <button id="LoadMore" is="emby-button" type="button" class="raised emby-button" style="display: none; margin-top: 1em"><span>Load more videos</span></button>
+                <div id="TagPager" style="display: flex; flex-wrap: wrap; gap: .5em; align-items: center; margin-top: 1em"></div>
                 <p id="TagStatus" role="status"></p>
             </div>
         </div>
@@ -34,10 +34,11 @@
                 var search = document.querySelector('#TagSearch');
                 var tagName = document.querySelector('#TagName');
                 var usedTags = document.querySelector('#UsedTags');
-                var loadMore = document.querySelector('#LoadMore');
                 var status = document.querySelector('#TagStatus');
                 var pageSize = 100;
                 var startIndex = 0;
+                var currentPage = 1;
+                var totalPages = 1;
 
                 function url(path) {
                     return ApiClient.getUrl('Plugins/TagManager/' + path);
@@ -126,21 +127,57 @@
                     items.appendChild(row);
                 }
 
-                function loadItems(append) {
-                    var query = 'Items?search=' + encodeURIComponent(search.value || '') + '&startIndex=' + startIndex + '&limit=' + pageSize;
+                function loadItems(append, requestedStartIndex, requestedLimit) {
+                    var queryStartIndex = requestedStartIndex === undefined ? startIndex : requestedStartIndex;
+                    var queryLimit = requestedLimit === undefined ? pageSize : requestedLimit;
+                    var query = 'Items?search=' + encodeURIComponent(search.value || '') + '&startIndex=' + queryStartIndex + '&limit=' + queryLimit;
                     return ApiClient.getJSON(url(query)).then(function (result) {
                         if (!append) {
                             items.innerHTML = '';
                         }
                         result.Items.forEach(renderItem);
-                        loadMore.style.display = result.HasMore ? '' : 'none';
+                        totalPages = Math.max(1, Math.ceil(result.TotalCount / pageSize));
+                        renderPager();
                         status.textContent = result.TotalCount + ' video(s)';
                     });
+                }
+
+                function createPageButton(label, pageNumber, isCurrent) {
+                    var button = document.createElement('button');
+                    button.type = 'button';
+                    button.className = isCurrent ? 'raised button-submit emby-button' : 'raised emby-button';
+                    button.textContent = label;
+                    button.disabled = isCurrent || pageNumber === currentPage;
+                    button.addEventListener('click', function () {
+                        currentPage = pageNumber;
+                        startIndex = (currentPage - 1) * pageSize;
+                        loadItems(false).catch(showLoadError);
+                    });
+                    return button;
+                }
+
+                function renderPager() {
+                    var pager = document.querySelector('#TagPager');
+                    pager.innerHTML = '';
+                    if (totalPages <= 1) {
+                        return;
+                    }
+
+                    pager.appendChild(createPageButton('First', 1, currentPage === 1));
+                    pager.appendChild(createPageButton('Previous', Math.max(1, currentPage - 1), false));
+                    var firstVisiblePage = Math.max(1, currentPage - 2);
+                    var lastVisiblePage = Math.min(totalPages, currentPage + 2);
+                    for (var pageNumber = firstVisiblePage; pageNumber <= lastVisiblePage; pageNumber++) {
+                        pager.appendChild(createPageButton(String(pageNumber), pageNumber, pageNumber === currentPage));
+                    }
+                    pager.appendChild(createPageButton('Next', Math.min(totalPages, currentPage + 1), false));
+                    pager.appendChild(createPageButton('Last', totalPages, currentPage === totalPages));
                 }
 
                 function refreshItems(resetPage) {
                     if (resetPage) {
                         startIndex = 0;
+                        currentPage = 1;
                     }
                     return loadItems(false);
                 }
@@ -161,10 +198,6 @@
                     refreshItems(true).catch(showLoadError);
                 });
 
-                loadMore.addEventListener('click', function () {
-                    startIndex += pageSize;
-                    loadItems(true).catch(showLoadError);
-                });
             }());
         </script>
     </div>
