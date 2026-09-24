@@ -65,7 +65,7 @@ public class TagManagerController : ControllerBase
         {
             Recursive = true,
             IncludeItemTypes = [BaseItemKind.Movie, BaseItemKind.Episode, BaseItemKind.Video, BaseItemKind.MusicVideo],
-            Name = normalizedSearch,
+            NameContains = normalizedSearch,
             StartIndex = Math.Max(0, startIndex),
             Limit = Math.Clamp(limit, 1, 200),
             EnableTotalRecordCount = true

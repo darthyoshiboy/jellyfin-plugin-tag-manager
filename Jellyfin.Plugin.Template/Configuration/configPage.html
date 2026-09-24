@@ -94,7 +94,7 @@
                         remove.textContent = tag + '  x';
                         remove.addEventListener('click', function () {
                             ApiClient.ajax({ type: 'DELETE', url: url('Items/' + item.Id + '/Tags?tag=' + encodeURIComponent(tag)) })
-                                .then(function () { refreshItems(); loadTags(); });
+                                .then(function () { refreshItems(false); loadTags(); });
                         });
                         tags.appendChild(remove);
                     });
@@ -116,7 +116,7 @@
                             contentType: 'application/json'
                         }).then(function () {
                             status.textContent = 'Tag saved.';
-                            refreshItems();
+                            refreshItems(false);
                             loadTags();
                         });
                     });
@@ -138,8 +138,10 @@
                     });
                 }
 
-                function refreshItems() {
-                    startIndex = 0;
+                function refreshItems(resetPage) {
+                    if (resetPage) {
+                        startIndex = 0;
+                    }
                     return loadItems(false);
                 }
 
@@ -151,12 +153,12 @@
                 page.addEventListener('pageshow', function () {
                     Dashboard.hideLoadingMsg();
                     status.textContent = 'Loading videos...';
-                    Promise.all([loadTags(), refreshItems()]).catch(showLoadError);
+                    Promise.all([loadTags(), refreshItems(true)]).catch(showLoadError);
                 });
 
                 document.querySelector('#TagSearchForm').addEventListener('submit', function (event) {
                     event.preventDefault();
-                    refreshItems().catch(showLoadError);
+                    refreshItems(true).catch(showLoadError);
                 });
 
                 loadMore.addEventListener('click', function () {
