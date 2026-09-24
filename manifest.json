@@ -1,0 +1,11 @@
+[
+  {
+    "guid": "fca5bb7e-37b6-4b90-9e43-3b4d9097e6e4",
+    "name": "Tag Manager",
+    "overview": "Manage Jellyfin item tags with reusable tag suggestions.",
+    "description": "Search library content and add or remove tags using a typeable selector populated with tags already used in the Jellyfin database.",
+    "owner": "darthyoshiboy",
+    "category": "General",
+    "versions": []
+  }
+]

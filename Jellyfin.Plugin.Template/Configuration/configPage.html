@@ -2,77 +2,116 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <title>Template</title>
+    <title>Tag Manager</title>
 </head>
 <body>
-    <div id="TemplateConfigPage" data-role="page" class="page type-interior pluginConfigurationPage" data-require="emby-input,emby-button,emby-select,emby-checkbox">
+    <div id="TagManagerPage" data-role="page" class="page type-interior pluginConfigurationPage" data-require="emby-input,emby-button">
         <div data-role="content">
             <div class="content-primary">
-                <form id="TemplateConfigForm">
-                    <div class="selectContainer">
-                        <label class="selectLabel" for="Options">Several Options</label>
-                        <select is="emby-select" id="Options" name="Options" class="emby-select-withcolor emby-select">
-                            <option id="optOneOption" value="OneOption">One Option</option>
-                            <option id="optAnotherOption" value="AnotherOption">Another Option</option>
-                        </select>
-                    </div>
+                <h1>Tag Manager</h1>
+                <p>Search your library, then add or remove tags. Previously used tags appear as suggestions.</p>
+                <form id="TagSearchForm">
                     <div class="inputContainer">
-                        <label class="inputLabel inputLabelUnfocused" for="AnInteger">An Integer</label>
-                        <input id="AnInteger" name="AnInteger" type="number" is="emby-input" min="0" />
-                        <div class="fieldDescription">A Description</div>
+                        <label class="inputLabel inputLabelUnfocused" for="TagSearch">Search library</label>
+                        <input id="TagSearch" type="search" is="emby-input" autocomplete="off" />
                     </div>
-                    <div class="checkboxContainer checkboxContainer-withDescription">
-                        <label class="emby-checkbox-label">
-                            <input id="TrueFalseSetting" name="TrueFalseCheckBox" type="checkbox" is="emby-checkbox" />
-                            <span>A Checkbox</span>
-                        </label>
-                    </div>
-                    <div class="inputContainer">
-                        <label class="inputLabel inputLabelUnfocused" for="AString">A String</label>
-                        <input id="AString" name="AString" type="text" is="emby-input" />
-                        <div class="fieldDescription">Another Description</div>
-                    </div>
-                    <div>
-                        <button is="emby-button" type="submit" class="raised button-submit block emby-button">
-                            <span>Save</span>
-                        </button>
-                    </div>
+                    <button is="emby-button" type="submit" class="raised emby-button">
+                        <span>Search</span>
+                    </button>
                 </form>
+                <div class="inputContainer" style="margin-top: 2em">
+                    <label class="inputLabel inputLabelUnfocused" for="TagName">New or existing tag</label>
+                    <input id="TagName" list="UsedTags" type="text" is="emby-input" autocomplete="off" />
+                    <datalist id="UsedTags"></datalist>
+                </div>
+                <div id="TagItems" style="margin-top: 1em"></div>
+                <p id="TagStatus" role="status"></p>
             </div>
         </div>
         <script type="text/javascript">
-            var TemplateConfig = {
-                pluginUniqueId: 'eb5d7894-8eef-4b36-aa6f-5d124e828ce1'
-            };
+            (function () {
+                var page = document.querySelector('#TagManagerPage');
+                var items = document.querySelector('#TagItems');
+                var search = document.querySelector('#TagSearch');
+                var tagName = document.querySelector('#TagName');
+                var usedTags = document.querySelector('#UsedTags');
+                var status = document.querySelector('#TagStatus');
 
-            document.querySelector('#TemplateConfigPage')
-                .addEventListener('pageshow', function() {
+                function url(path) {
+                    return ApiClient.getUrl('Plugins/TagManager/' + path);
+                }
+
+                function loadTags() {
+                    return ApiClient.getJSON(url('Tags')).then(function (tags) {
+                        usedTags.innerHTML = '';
+                        tags.forEach(function (tag) {
+                            var option = document.createElement('option');
+                            option.value = tag;
+                            usedTags.appendChild(option);
+                        });
+                    });
+                }
+
+                function loadItems() {
+                    return ApiClient.getJSON(url('Items?search=' + encodeURIComponent(search.value || ''))).then(function (libraryItems) {
+                        items.innerHTML = '';
+                        libraryItems.forEach(function (item) {
+                            var row = document.createElement('div');
+                            row.style.marginBottom = '1em';
+                            var title = document.createElement('strong');
+                            title.textContent = item.Name;
+                            row.appendChild(title);
+                            var tags = document.createElement('div');
+                            tags.style.marginTop = '.35em';
+                            item.Tags.forEach(function (tag) {
+                                var remove = document.createElement('button');
+                                remove.type = 'button';
+                                remove.className = 'raised emby-button';
+                                remove.style.marginRight = '.5em';
+                                remove.textContent = tag + '  x';
+                                remove.addEventListener('click', function () {
+                                    ApiClient.ajax({ type: 'DELETE', url: url('Items/' + item.Id + '/Tags?tag=' + encodeURIComponent(tag)) })
+                                        .then(function () { loadTags().then(loadItems); });
+                                });
+                                tags.appendChild(remove);
+                            });
+                            var add = document.createElement('button');
+                            add.type = 'button';
+                            add.className = 'raised button-submit emby-button';
+                            add.textContent = 'Add tag';
+                            add.addEventListener('click', function () {
+                                var value = tagName.value.trim();
+                                if (!value) {
+                                    status.textContent = 'Enter a tag first.';
+                                    return;
+                                }
+                                ApiClient.ajax({
+                                    type: 'POST',
+                                    url: url('Items/' + item.Id + '/Tags'),
+                                    data: JSON.stringify({ Tag: value }),
+                                    contentType: 'application/json'
+                                }).then(function () {
+                                    status.textContent = 'Tag saved.';
+                                    loadTags().then(loadItems);
+                                });
+                            });
+                            tags.appendChild(add);
+                            row.appendChild(tags);
+                            items.appendChild(row);
+                        });
+                    });
+                }
+
+                page.addEventListener('pageshow', function () {
                     Dashboard.showLoadingMsg();
-                    ApiClient.getPluginConfiguration(TemplateConfig.pluginUniqueId).then(function (config) {
-                        document.querySelector('#Options').value = config.Options;
-                        document.querySelector('#AnInteger').value = config.AnInteger;
-                        document.querySelector('#TrueFalseSetting').checked = config.TrueFalseSetting;
-                        document.querySelector('#AString').value = config.AString;
-                        Dashboard.hideLoadingMsg();
-                    });
+                    Promise.all([loadTags(), loadItems()]).then(function () { Dashboard.hideLoadingMsg(); });
                 });
 
-            document.querySelector('#TemplateConfigForm')
-                .addEventListener('submit', function(e) {
-                Dashboard.showLoadingMsg();
-                ApiClient.getPluginConfiguration(TemplateConfig.pluginUniqueId).then(function (config) {
-                    config.Options = document.querySelector('#Options').value;
-                    config.AnInteger = document.querySelector('#AnInteger').value;
-                    config.TrueFalseSetting = document.querySelector('#TrueFalseSetting').checked;
-                    config.AString = document.querySelector('#AString').value;
-                    ApiClient.updatePluginConfiguration(TemplateConfig.pluginUniqueId, config).then(function (result) {
-                        Dashboard.processPluginConfigurationUpdateResult(result);
-                    });
+                document.querySelector('#TagSearchForm').addEventListener('submit', function (event) {
+                    event.preventDefault();
+                    loadItems();
                 });
-
-                e.preventDefault();
-                return false;
-            });
+            }());
         </script>
     </div>
 </body>

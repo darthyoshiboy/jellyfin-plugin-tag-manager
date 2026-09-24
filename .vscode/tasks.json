@@ -21,7 +21,7 @@
       "args": [
         "publish",
         "--configuration=Debug",
-        "${workspaceFolder}/${config:pluginName}.sln",
+        "${workspaceFolder}/Jellyfin.Plugin.Template.slnx",
         "/property:GenerateFullPaths=true",
         "/consoleloggerparameters:NoSummary"
       ],
@@ -60,14 +60,14 @@
       "command": "cp",
       "windows": {
         "args": [
-          "./${config:pluginName}/bin/Debug/net9.0/publish/*",
+          "./Jellyfin.Plugin.Template/bin/Debug/net8.0/publish/*",
           "${config:jellyfinWindowsDataDir}/plugins/${config:pluginName}/"
         ]
       },
       "linux": {
         "args": [
           "-r",
-          "./${config:pluginName}/bin/Debug/net9.0/publish/*",
+          "./Jellyfin.Plugin.Template/bin/Debug/net8.0/publish/*",
           "${config:jellyfinLinuxDataDir}/plugins/${config:pluginName}/"
         ]
       }
