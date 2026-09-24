@@ -84,6 +84,38 @@
                     title.textContent = item.Name;
                     body.appendChild(title);
 
+                    var preview = document.createElement('button');
+                    preview.type = 'button';
+                    preview.className = 'raised emby-button';
+                    preview.style.marginTop = '.75em';
+                    preview.textContent = 'Preview';
+                    preview.addEventListener('click', function () {
+                        var existingPlayer = body.querySelector('video');
+                        if (existingPlayer) {
+                            existingPlayer.pause();
+                            existingPlayer.remove();
+                            preview.textContent = 'Preview';
+                            return;
+                        }
+
+                        var player = document.createElement('video');
+                        player.controls = true;
+                        player.preload = 'metadata';
+                        player.playsInline = true;
+                        player.style.display = 'block';
+                        player.style.width = '100%';
+                        player.style.maxWidth = '28em';
+                        player.style.marginTop = '.75em';
+                        player.src = ApiClient.getUrl('Videos/' + item.Id + '/stream.mp4?api_key=' + encodeURIComponent(ApiClient.accessToken()));
+                        player.addEventListener('error', function () {
+                            status.textContent = 'Unable to play this video in the browser.';
+                        });
+                        body.insertBefore(player, tags);
+                        preview.textContent = 'Close preview';
+                        player.play().catch(function () { });
+                    });
+                    body.appendChild(preview);
+
                     var tags = document.createElement('div');
                     tags.style.marginTop = '.5em';
                     (item.Tags || []).forEach(function (tag) {
