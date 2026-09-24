@@ -58,6 +58,7 @@
                     var row = document.createElement('div');
                     row.style.display = 'flex';
                     row.style.gap = '1em';
+                    row.style.alignItems = 'flex-start';
                     row.style.padding = '.75em';
                     row.style.border = '1px solid rgba(127,127,127,.35)';
 
@@ -72,8 +73,13 @@
                     row.appendChild(image);
 
                     var body = document.createElement('div');
+                    body.style.flex = '1 1 auto';
                     body.style.minWidth = '0';
                     var title = document.createElement('strong');
+                    title.style.display = 'block';
+                    title.style.overflowWrap = 'anywhere';
+                    title.style.wordBreak = 'break-word';
+                    title.style.lineHeight = '1.3';
                     title.textContent = item.Name;
                     body.appendChild(title);
 
