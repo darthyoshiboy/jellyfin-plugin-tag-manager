@@ -8,12 +8,12 @@
     "category": "General",
     "versions": [
       {
-        "version": "1.1.1",
+        "version": "1.1.2",
         "changelog": "Initial release of Tag Manager.",
         "targetAbi": "10.9.0.0",
-        "sourceUrl": "https://github.com/darthyoshiboy/jellyfin-plugin-tag-manager/releases/download/v1.1.1/Jellyfin.Plugin.TagManager.zip",
-        "checksum": "ABCBC8A4BBD6B5A71BDD3775DECBC381",
-        "timestamp": "2026-09-24T02:23:59Z",
+        "sourceUrl": "https://github.com/darthyoshiboy/jellyfin-plugin-tag-manager/releases/download/v1.1.2/Jellyfin.Plugin.TagManager.zip",
+        "checksum": "F5653296DBC0ECA00BD11B13E83F5488",
+        "timestamp": "2026-09-24T02:33:32Z",
         "repositoryName": "darthyoshiboy/jellyfin-plugin-tag-manager",
         "repositoryUrl": "https://github.com/darthyoshiboy/jellyfin-plugin-tag-manager"
       }
