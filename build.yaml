@@ -2,7 +2,7 @@
 name: "Tag Manager"
 guid: "fca5bb7e-37b6-4b90-9e43-3b4d9097e6e4"
 version: "1.0.0.0"
-targetAbi: "10.0.0.0"
+targetAbi: "10.9.0.0"
 framework: "net8.0"
 overview: "Manage Jellyfin item tags with reusable tag suggestions"
 description: >

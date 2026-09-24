@@ -1,6 +1,6 @@
 # Jellyfin Tag Manager
 
-A Jellyfin 10.0.9 plugin for managing tags across library content. The plugin provides a dashboard page where administrators can search items, type a new tag, choose an existing tag from the suggestions list, and add or remove tags.
+A Jellyfin 10.9.0 plugin for managing tags across library content. The plugin provides a dashboard page where administrators can search items, type a new tag, choose an existing tag from the suggestions list, and add or remove tags.
 
 ## Install from the plugin repository
 
@@ -23,7 +23,7 @@ Replace the repository name or branch in that URL if the new repository uses dif
 
 ## Local development
 
-The project targets `net8.0` and references the Jellyfin 10.0.9 packages. Restore dependencies and publish the plugin with:
+The project targets `net8.0` and references the Jellyfin 10.9.0 plugin packages. Restore dependencies and publish the plugin with:
 
 ```shell
 dotnet restore

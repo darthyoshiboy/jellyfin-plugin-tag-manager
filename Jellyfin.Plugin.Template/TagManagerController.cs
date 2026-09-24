@@ -38,8 +38,10 @@ public class TagManagerController : ControllerBase
     [HttpGet("Tags")]
     public IReadOnlyList<string> GetTags()
     {
-        return _libraryManager.GetTagNames(new InternalItemsQuery())
+        return _libraryManager.GetItemList(new InternalItemsQuery { Recursive = true })
+            .SelectMany(item => item.Tags ?? Array.Empty<string>())
             .Where(tag => !string.IsNullOrWhiteSpace(tag))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(tag => tag, StringComparer.OrdinalIgnoreCase)
             .ToArray();
     }
@@ -127,21 +129,5 @@ public class TagManagerController : ControllerBase
             cancellationToken).ConfigureAwait(false);
 
         return NoContent();
-    }
-
-    /// <summary>
-    /// An item shown by the tag editor.
-    /// </summary>
-    public sealed record TagItem(Guid Id, string Name, IReadOnlyList<string> Tags);
-
-    /// <summary>
-    /// A tag mutation request.
-    /// </summary>
-    public sealed class TagRequest
-    {
-        /// <summary>
-        /// Gets or sets the tag.
-        /// </summary>
-        public string? Tag { get; set; }
     }
 }

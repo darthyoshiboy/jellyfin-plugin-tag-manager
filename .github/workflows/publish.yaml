@@ -47,7 +47,7 @@ jobs:
         run: |
           CHECKSUM=$(cat artifacts/checksum.txt)
           jq --arg version "${VERSION#v}" \
-             --arg targetAbi "10.0.0.0" \
+             --arg targetAbi "10.9.0.0" \
              --arg sourceUrl "https://github.com/${REPOSITORY}/releases/download/${TAG}/Jellyfin.Plugin.TagManager.zip" \
              --arg checksum "$CHECKSUM" \
              '.[0].versions = [{version: $version, targetAbi: $targetAbi, sourceUrl: $sourceUrl, checksum: $checksum}]' \
