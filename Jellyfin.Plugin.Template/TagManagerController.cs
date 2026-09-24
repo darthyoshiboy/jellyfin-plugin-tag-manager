@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Jellyfin.Data.Enums;
 using MediaBrowser.Common.Api;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Library;
@@ -50,20 +51,34 @@ public class TagManagerController : ControllerBase
     /// Searches library items for the tag editor.
     /// </summary>
     /// <param name="search">Optional title search.</param>
-    /// <returns>Matching items and their tags.</returns>
+    /// <param name="startIndex">The zero-based result offset.</param>
+    /// <param name="limit">The maximum number of results to return.</param>
+    /// <returns>Matching items and paging information.</returns>
     [HttpGet("Items")]
-    public IReadOnlyList<TagItem> GetItems([FromQuery] string? search = null)
+    public TagItemPage GetItems(
+        [FromQuery] string? search = null,
+        [FromQuery] int startIndex = 0,
+        [FromQuery] int limit = 100)
     {
-        var items = _libraryManager.GetItemList(new InternalItemsQuery { Recursive = true });
         var normalizedSearch = search?.Trim();
+        var query = new InternalItemsQuery
+        {
+            Recursive = true,
+            IncludeItemTypes = [BaseItemKind.Movie, BaseItemKind.Episode, BaseItemKind.Video, BaseItemKind.MusicVideo],
+            Name = normalizedSearch,
+            StartIndex = Math.Max(0, startIndex),
+            Limit = Math.Clamp(limit, 1, 200),
+            EnableTotalRecordCount = true
+        };
+        var totalCount = _libraryManager.GetCount(query);
+        var items = _libraryManager.GetItemList(query);
 
-        return items
-            .Where(item => string.IsNullOrEmpty(normalizedSearch)
-                || item.Name?.Contains(normalizedSearch, StringComparison.OrdinalIgnoreCase) == true)
+        var result = items
             .OrderBy(item => item.SortName ?? item.Name, StringComparer.OrdinalIgnoreCase)
-            .Take(200)
             .Select(item => new TagItem(item.Id, item.Name ?? string.Empty, item.Tags ?? Array.Empty<string>()))
             .ToArray();
+
+        return new TagItemPage(result, totalCount, startIndex + result.Length < totalCount);
     }
 
     /// <summary>

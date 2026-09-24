@@ -9,22 +9,21 @@
         <div data-role="content">
             <div class="content-primary">
                 <h1>Tag Manager</h1>
-                <p>Search your library, then add or remove tags. Previously used tags appear as suggestions.</p>
+                <p>Search videos, then add or remove tags. Previously used tags appear as suggestions.</p>
                 <form id="TagSearchForm">
                     <div class="inputContainer">
-                        <label class="inputLabel inputLabelUnfocused" for="TagSearch">Search library</label>
-                        <input id="TagSearch" type="search" is="emby-input" autocomplete="off" />
+                        <label class="inputLabel inputLabelUnfocused" for="TagSearch">Search videos</label>
+                        <input id="TagSearch" type="search" is="emby-input" autocomplete="off">
                     </div>
-                    <button is="emby-button" type="submit" class="raised emby-button">
-                        <span>Search</span>
-                    </button>
+                    <button is="emby-button" type="submit" class="raised emby-button"><span>Search</span></button>
                 </form>
                 <div class="inputContainer" style="margin-top: 2em">
                     <label class="inputLabel inputLabelUnfocused" for="TagName">New or existing tag</label>
-                    <input id="TagName" list="UsedTags" type="text" is="emby-input" autocomplete="off" />
+                    <input id="TagName" list="UsedTags" type="text" is="emby-input" autocomplete="off">
                     <datalist id="UsedTags"></datalist>
                 </div>
-                <div id="TagItems" style="margin-top: 1em"></div>
+                <div id="TagItems" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(20em, 1fr)); gap: 1em; margin-top: 1em"></div>
+                <button id="LoadMore" is="emby-button" type="button" class="raised emby-button" style="display: none; margin-top: 1em"><span>Load more videos</span></button>
                 <p id="TagStatus" role="status"></p>
             </div>
         </div>
@@ -35,7 +34,10 @@
                 var search = document.querySelector('#TagSearch');
                 var tagName = document.querySelector('#TagName');
                 var usedTags = document.querySelector('#UsedTags');
+                var loadMore = document.querySelector('#LoadMore');
                 var status = document.querySelector('#TagStatus');
+                var pageSize = 100;
+                var startIndex = 0;
 
                 function url(path) {
                     return ApiClient.getUrl('Plugins/TagManager/' + path);
@@ -52,64 +54,108 @@
                     });
                 }
 
-                function loadItems() {
-                    return ApiClient.getJSON(url('Items?search=' + encodeURIComponent(search.value || ''))).then(function (libraryItems) {
-                        items.innerHTML = '';
-                        libraryItems.forEach(function (item) {
-                            var row = document.createElement('div');
-                            row.style.marginBottom = '1em';
-                            var title = document.createElement('strong');
-                            title.textContent = item.Name;
-                            row.appendChild(title);
-                            var tags = document.createElement('div');
-                            tags.style.marginTop = '.35em';
-                            item.Tags.forEach(function (tag) {
-                                var remove = document.createElement('button');
-                                remove.type = 'button';
-                                remove.className = 'raised emby-button';
-                                remove.style.marginRight = '.5em';
-                                remove.textContent = tag + '  x';
-                                remove.addEventListener('click', function () {
-                                    ApiClient.ajax({ type: 'DELETE', url: url('Items/' + item.Id + '/Tags?tag=' + encodeURIComponent(tag)) })
-                                        .then(function () { loadTags().then(loadItems); });
-                                });
-                                tags.appendChild(remove);
-                            });
-                            var add = document.createElement('button');
-                            add.type = 'button';
-                            add.className = 'raised button-submit emby-button';
-                            add.textContent = 'Add tag';
-                            add.addEventListener('click', function () {
-                                var value = tagName.value.trim();
-                                if (!value) {
-                                    status.textContent = 'Enter a tag first.';
-                                    return;
-                                }
-                                ApiClient.ajax({
-                                    type: 'POST',
-                                    url: url('Items/' + item.Id + '/Tags'),
-                                    data: JSON.stringify({ Tag: value }),
-                                    contentType: 'application/json'
-                                }).then(function () {
-                                    status.textContent = 'Tag saved.';
-                                    loadTags().then(loadItems);
-                                });
-                            });
-                            tags.appendChild(add);
-                            row.appendChild(tags);
-                            items.appendChild(row);
+                function renderItem(item) {
+                    var row = document.createElement('div');
+                    row.style.display = 'flex';
+                    row.style.gap = '1em';
+                    row.style.padding = '.75em';
+                    row.style.border = '1px solid rgba(127,127,127,.35)';
+
+                    var image = document.createElement('img');
+                    image.src = ApiClient.getImageUrl(item.Id, { type: 'Primary', maxWidth: 160, maxHeight: 160, quality: 80 });
+                    image.alt = '';
+                    image.style.width = '5em';
+                    image.style.height = '7em';
+                    image.style.objectFit = 'cover';
+                    image.style.backgroundColor = 'rgba(127,127,127,.25)';
+                    image.onerror = function () { image.style.visibility = 'hidden'; };
+                    row.appendChild(image);
+
+                    var body = document.createElement('div');
+                    body.style.minWidth = '0';
+                    var title = document.createElement('strong');
+                    title.textContent = item.Name;
+                    body.appendChild(title);
+
+                    var tags = document.createElement('div');
+                    tags.style.marginTop = '.5em';
+                    (item.Tags || []).forEach(function (tag) {
+                        var remove = document.createElement('button');
+                        remove.type = 'button';
+                        remove.className = 'raised emby-button';
+                        remove.style.marginRight = '.5em';
+                        remove.style.marginBottom = '.5em';
+                        remove.textContent = tag + '  x';
+                        remove.addEventListener('click', function () {
+                            ApiClient.ajax({ type: 'DELETE', url: url('Items/' + item.Id + '/Tags?tag=' + encodeURIComponent(tag)) })
+                                .then(function () { refreshItems(); loadTags(); });
                         });
+                        tags.appendChild(remove);
+                    });
+
+                    var add = document.createElement('button');
+                    add.type = 'button';
+                    add.className = 'raised button-submit emby-button';
+                    add.textContent = 'Add tag';
+                    add.addEventListener('click', function () {
+                        var value = tagName.value.trim();
+                        if (!value) {
+                            status.textContent = 'Enter a tag first.';
+                            return;
+                        }
+                        ApiClient.ajax({
+                            type: 'POST',
+                            url: url('Items/' + item.Id + '/Tags'),
+                            data: JSON.stringify({ Tag: value }),
+                            contentType: 'application/json'
+                        }).then(function () {
+                            status.textContent = 'Tag saved.';
+                            refreshItems();
+                            loadTags();
+                        });
+                    });
+                    tags.appendChild(add);
+                    body.appendChild(tags);
+                    row.appendChild(body);
+                    items.appendChild(row);
+                }
+
+                function loadItems(append) {
+                    var query = 'Items?search=' + encodeURIComponent(search.value || '') + '&startIndex=' + startIndex + '&limit=' + pageSize;
+                    return ApiClient.getJSON(url(query)).then(function (result) {
+                        if (!append) {
+                            items.innerHTML = '';
+                        }
+                        result.Items.forEach(renderItem);
+                        loadMore.style.display = result.HasMore ? '' : 'none';
+                        status.textContent = result.TotalCount + ' video(s)';
                     });
                 }
 
+                function refreshItems() {
+                    startIndex = 0;
+                    return loadItems(false);
+                }
+
+                function showLoadError(error) {
+                    console.error('Tag Manager failed to load', error);
+                    status.textContent = 'Unable to load videos. Check the Jellyfin server log.';
+                }
+
                 page.addEventListener('pageshow', function () {
-                    Dashboard.showLoadingMsg();
-                    Promise.all([loadTags(), loadItems()]).then(function () { Dashboard.hideLoadingMsg(); });
+                    Dashboard.hideLoadingMsg();
+                    status.textContent = 'Loading videos...';
+                    Promise.all([loadTags(), refreshItems()]).catch(showLoadError);
                 });
 
                 document.querySelector('#TagSearchForm').addEventListener('submit', function (event) {
                     event.preventDefault();
-                    loadItems();
+                    refreshItems().catch(showLoadError);
+                });
+
+                loadMore.addEventListener('click', function () {
+                    startIndex += pageSize;
+                    loadItems(true).catch(showLoadError);
                 });
             }());
         </script>

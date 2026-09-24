@@ -30,7 +30,7 @@ jobs:
           cd artifacts/publish
           zip -r ../Jellyfin.Plugin.TagManager.zip .
           cd ../..
-          sha256sum artifacts/Jellyfin.Plugin.TagManager.zip | cut -d ' ' -f 1 > artifacts/checksum.txt
+          md5sum artifacts/Jellyfin.Plugin.TagManager.zip | cut -d ' ' -f 1 > artifacts/checksum.txt
 
       - name: Create GitHub release
         uses: softprops/action-gh-release@v2
@@ -47,10 +47,14 @@ jobs:
         run: |
           CHECKSUM=$(cat artifacts/checksum.txt)
           jq --arg version "${VERSION#v}" \
+             --arg changelog "Initial release of Tag Manager." \
              --arg targetAbi "10.9.0.0" \
              --arg sourceUrl "https://github.com/${REPOSITORY}/releases/download/${TAG}/Jellyfin.Plugin.TagManager.zip" \
-             --arg checksum "$CHECKSUM" \
-             '.[0].versions = [{version: $version, targetAbi: $targetAbi, sourceUrl: $sourceUrl, checksum: $checksum}]' \
+             --arg checksum "${CHECKSUM^^}" \
+             --arg timestamp "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+             --arg repositoryName "$REPOSITORY" \
+             --arg repositoryUrl "https://github.com/${REPOSITORY}" \
+             '.[0].versions = [{version: $version, changelog: $changelog, targetAbi: $targetAbi, sourceUrl: $sourceUrl, checksum: $checksum, timestamp: $timestamp, repositoryName: $repositoryName, repositoryUrl: $repositoryUrl}]' \
              manifest.json > manifest.json.tmp
           mv manifest.json.tmp manifest.json
 
