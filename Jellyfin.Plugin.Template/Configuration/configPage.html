@@ -25,7 +25,7 @@
                     <button is="emby-button" type="submit" class="raised emby-button"><span>Search</span></button>
                 </form>
                 <div id="TagPagerTop" style="display: flex; flex-wrap: wrap; gap: .5em; align-items: center; margin-top: 1em"></div>
-                <div id="TagItems" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(20em, 1fr)); gap: 1em; margin-top: 1em"></div>
+                <div id="TagItems" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(20em, 100%), 1fr)); gap: 1em; margin-top: 1em; max-width: 62em"></div>
                 <div id="TagPager" style="display: flex; flex-wrap: wrap; gap: .5em; align-items: center; margin-top: 1em"></div>
                 <p id="TagStatus" role="status"></p>
             </div>
@@ -105,6 +105,7 @@
 
                         var player = document.createElement('video');
                         player.controls = true;
+                        player.tabIndex = 0;
                         player.preload = 'metadata';
                         player.playsInline = true;
                         player.style.display = 'block';
@@ -117,6 +118,7 @@
                         });
                         body.insertBefore(player, tags);
                         preview.textContent = 'Close preview';
+                        player.focus();
                         player.play().catch(function () { });
                     });
                     body.appendChild(preview);
