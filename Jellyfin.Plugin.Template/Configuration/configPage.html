@@ -33,6 +33,7 @@
         <script type="text/javascript">
             (function () {
                 var page = document.querySelector('#TagManagerPage');
+                var content = page.querySelector('.content-primary');
                 var items = document.querySelector('#TagItems');
                 var search = document.querySelector('#TagSearch');
                 var tagName = document.querySelector('#TagName');
@@ -220,6 +221,10 @@
                     return loadItems(false);
                 }
 
+                function updateSelectorSpacing() {
+                    content.style.paddingTop = Math.ceil(tagSelectorDock.getBoundingClientRect().height + 12) + 'px';
+                }
+
                 function showLoadError(error) {
                     console.error('Tag Manager failed to load', error);
                     status.textContent = 'Unable to load videos. Check the Jellyfin server log.';
@@ -227,6 +232,7 @@
 
                 page.addEventListener('pageshow', function () {
                     document.documentElement.appendChild(tagSelectorDock);
+                    updateSelectorSpacing();
                     Dashboard.hideLoadingMsg();
                     status.textContent = 'Loading videos...';
                     Promise.all([loadTags(), refreshItems(true)]).catch(showLoadError);
@@ -235,6 +241,8 @@
                 page.addEventListener('pagehide', function () {
                     page.appendChild(tagSelectorDock);
                 });
+
+                window.addEventListener('resize', updateSelectorSpacing);
 
                 document.querySelector('#TagSearchForm').addEventListener('submit', function (event) {
                     event.preventDefault();
