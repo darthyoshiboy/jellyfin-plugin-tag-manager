@@ -3,25 +3,12 @@
 <head>
     <meta charset="utf-8">
     <title>Tag Manager</title>
-    <style>
-        #TagSelectorDock {
-            position: sticky;
-            top: 0;
-            z-index: 9999;
-            box-sizing: border-box;
-            margin-bottom: 1em;
-            padding: .75em max(1em, env(safe-area-inset-right)) .75em max(1em, env(safe-area-inset-left));
-            background-color: var(--theme-background, #181818);
-            border-bottom: 1px solid rgba(127, 127, 127, .45);
-            box-shadow: 0 4px 16px rgba(0, 0, 0, .2);
-        }
-    </style>
 </head>
 <body>
     <div id="TagManagerPage" data-role="page" class="page type-interior pluginConfigurationPage" data-require="emby-input,emby-button">
         <div data-role="content">
-            <div class="content-primary">
-                <div id="TagSelectorDock">
+            <div class="content-primary" style="padding-top: 6em">
+                <div id="TagSelectorDock" style="position: fixed; top: 0; left: 0; right: 0; z-index: 9999; box-sizing: border-box; padding: .75em max(1em, env(safe-area-inset-right)) .75em max(1em, env(safe-area-inset-left)); background-color: var(--theme-background, #181818); border-bottom: 1px solid rgba(127, 127, 127, .45); box-shadow: 0 4px 16px rgba(0, 0, 0, .2)">
                     <div class="inputContainer" style="margin: 0">
                         <label class="inputLabel inputLabelUnfocused" for="TagName">New or existing tag</label>
                         <input id="TagName" list="UsedTags" type="text" is="emby-input" autocomplete="off">
@@ -50,6 +37,7 @@
                 var search = document.querySelector('#TagSearch');
                 var tagName = document.querySelector('#TagName');
                 var usedTags = document.querySelector('#UsedTags');
+                var tagSelectorDock = document.querySelector('#TagSelectorDock');
                 var status = document.querySelector('#TagStatus');
                 var pageSize = 100;
                 var startIndex = 0;
@@ -238,9 +226,14 @@
                 }
 
                 page.addEventListener('pageshow', function () {
+                    document.documentElement.appendChild(tagSelectorDock);
                     Dashboard.hideLoadingMsg();
                     status.textContent = 'Loading videos...';
                     Promise.all([loadTags(), refreshItems(true)]).catch(showLoadError);
+                });
+
+                page.addEventListener('pagehide', function () {
+                    page.appendChild(tagSelectorDock);
                 });
 
                 document.querySelector('#TagSearchForm').addEventListener('submit', function (event) {
