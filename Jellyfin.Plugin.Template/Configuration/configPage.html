@@ -249,7 +249,7 @@
                 });
 
                 page.addEventListener('pagehide', function () {
-                    tagSelectorDock.remove();
+                    page.appendChild(tagSelectorDock);
                 });
 
                 document.querySelector('#TagSearchForm').addEventListener('submit', function (event) {
