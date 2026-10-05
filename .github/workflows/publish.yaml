@@ -31,7 +31,18 @@ jobs:
           dotnet-version: "8.0.x"
 
       - name: Publish plugin
-        run: dotnet publish Jellyfin.Plugin.Template/Jellyfin.Plugin.Template.csproj --configuration Release --output artifacts/publish --no-self-contained -p:Version="${VERSION#v}" -p:AssemblyVersion="${VERSION#v}.0.0" -p:FileVersion="${VERSION#v}.0.0"
+        run: |
+          PLUGIN_VERSION="${VERSION#v}"
+          if [[ ! "$PLUGIN_VERSION" =~ ^[0-9]+(\.[0-9]+){1,3}$ ]]; then
+            echo "Release version must contain 2 to 4 numeric components." >&2
+            exit 1
+          fi
+          IFS='.' read -r -a VERSION_PARTS <<< "$PLUGIN_VERSION"
+          while (( ${#VERSION_PARTS[@]} < 4 )); do
+            VERSION_PARTS+=(0)
+          done
+          ASSEMBLY_VERSION="$(IFS='.'; printf '%s' "${VERSION_PARTS[*]}")"
+          dotnet publish Jellyfin.Plugin.Template/Jellyfin.Plugin.Template.csproj --configuration Release --output artifacts/publish --no-self-contained -p:Version="$PLUGIN_VERSION" -p:AssemblyVersion="$ASSEMBLY_VERSION" -p:FileVersion="$ASSEMBLY_VERSION"
 
       - name: Create plugin archive
         run: |
