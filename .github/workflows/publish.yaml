@@ -23,7 +23,7 @@ jobs:
           dotnet-version: "8.0.x"
 
       - name: Publish plugin
-        run: dotnet publish Jellyfin.Plugin.Template/Jellyfin.Plugin.Template.csproj --configuration Release --output artifacts/publish --no-self-contained
+        run: dotnet publish Jellyfin.Plugin.Template/Jellyfin.Plugin.Template.csproj --configuration Release --output artifacts/publish --no-self-contained -p:Version="${VERSION#v}" -p:AssemblyVersion="${VERSION#v}.0.0" -p:FileVersion="${VERSION#v}.0.0"
 
       - name: Create plugin archive
         run: |
