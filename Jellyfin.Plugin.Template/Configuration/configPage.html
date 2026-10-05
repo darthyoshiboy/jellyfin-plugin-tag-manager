@@ -3,6 +3,22 @@
 <head>
     <meta charset="utf-8">
     <title>Tag Manager</title>
+    <style>
+        #TagSelectorDock {
+            position: fixed;
+            inset: auto 0 0;
+            z-index: 9999;
+            box-sizing: border-box;
+            padding: .75em max(1em, env(safe-area-inset-right)) calc(.75em + env(safe-area-inset-bottom)) max(1em, env(safe-area-inset-left));
+            background-color: var(--theme-background, #181818);
+            border-top: 1px solid rgba(127, 127, 127, .45);
+            box-shadow: 0 -4px 16px rgba(0, 0, 0, .2);
+        }
+
+        #TagManagerPage .content-primary {
+            padding-bottom: 6em;
+        }
+    </style>
 </head>
 <body>
     <div id="TagManagerPage" data-role="page" class="page type-interior pluginConfigurationPage" data-require="emby-input,emby-button">
@@ -17,14 +33,17 @@
                     </div>
                     <button is="emby-button" type="submit" class="raised emby-button"><span>Search</span></button>
                 </form>
-                <div class="inputContainer" style="margin-top: 2em">
-                    <label class="inputLabel inputLabelUnfocused" for="TagName">New or existing tag</label>
-                    <input id="TagName" list="UsedTags" type="text" is="emby-input" autocomplete="off">
-                    <datalist id="UsedTags"></datalist>
-                </div>
+                <div id="TagPagerTop" style="display: flex; flex-wrap: wrap; gap: .5em; align-items: center; margin-top: 1em"></div>
                 <div id="TagItems" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(20em, 1fr)); gap: 1em; margin-top: 1em"></div>
                 <div id="TagPager" style="display: flex; flex-wrap: wrap; gap: .5em; align-items: center; margin-top: 1em"></div>
                 <p id="TagStatus" role="status"></p>
+            </div>
+        </div>
+        <div id="TagSelectorDock">
+            <div class="inputContainer" style="margin: 0">
+                <label class="inputLabel inputLabelUnfocused" for="TagName">New or existing tag</label>
+                <input id="TagName" list="UsedTags" type="text" is="emby-input" autocomplete="off">
+                <datalist id="UsedTags"></datalist>
             </div>
         </div>
         <script type="text/javascript">
@@ -189,21 +208,23 @@
                 }
 
                 function renderPager() {
-                    var pager = document.querySelector('#TagPager');
-                    pager.innerHTML = '';
-                    if (totalPages <= 1) {
-                        return;
-                    }
+                    ['#TagPagerTop', '#TagPager'].forEach(function (selector) {
+                        var pager = document.querySelector(selector);
+                        pager.innerHTML = '';
+                        if (totalPages <= 1) {
+                            return;
+                        }
 
-                    pager.appendChild(createPageButton('First', 1, currentPage === 1));
-                    pager.appendChild(createPageButton('Previous', Math.max(1, currentPage - 1), false));
-                    var firstVisiblePage = Math.max(1, currentPage - 2);
-                    var lastVisiblePage = Math.min(totalPages, currentPage + 2);
-                    for (var pageNumber = firstVisiblePage; pageNumber <= lastVisiblePage; pageNumber++) {
-                        pager.appendChild(createPageButton(String(pageNumber), pageNumber, pageNumber === currentPage));
-                    }
-                    pager.appendChild(createPageButton('Next', Math.min(totalPages, currentPage + 1), false));
-                    pager.appendChild(createPageButton('Last', totalPages, currentPage === totalPages));
+                        pager.appendChild(createPageButton('First', 1, currentPage === 1));
+                        pager.appendChild(createPageButton('Previous', Math.max(1, currentPage - 1), false));
+                        var firstVisiblePage = Math.max(1, currentPage - 2);
+                        var lastVisiblePage = Math.min(totalPages, currentPage + 2);
+                        for (var pageNumber = firstVisiblePage; pageNumber <= lastVisiblePage; pageNumber++) {
+                            pager.appendChild(createPageButton(String(pageNumber), pageNumber, pageNumber === currentPage));
+                        }
+                        pager.appendChild(createPageButton('Next', Math.min(totalPages, currentPage + 1), false));
+                        pager.appendChild(createPageButton('Last', totalPages, currentPage === totalPages));
+                    });
                 }
 
                 function refreshItems(resetPage) {
