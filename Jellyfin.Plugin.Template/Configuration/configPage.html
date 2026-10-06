@@ -19,6 +19,7 @@
                         <label class="selectLabel" for="TagFilter">Filter by tag</label>
                         <select id="TagFilter" is="emby-select" class="emby-select">
                             <option value="">All tags</option>
+                            <option value="__no_tags__">No tags</option>
                         </select>
                     </div>
                     <button is="emby-button" type="submit" class="raised emby-button"><span>Search</span></button>
@@ -37,6 +38,7 @@
                 var tagFilter = document.querySelector('#TagFilter');
                 var status = document.querySelector('#TagStatus');
                 var availableTags = [];
+                var noTagsFilterValue = '__no_tags__';
                 var activePlayer = null;
                 var activePreviewButton = null;
                 var pageSize = 100;
@@ -68,7 +70,7 @@
                     return ApiClient.getJSON(url('Tags')).then(function (tags) {
                         var selectedTag = tagFilter.value;
                         availableTags = tags;
-                        tagFilter.innerHTML = '<option value="">All tags</option>';
+                        tagFilter.innerHTML = '<option value="">All tags</option><option value="__no_tags__">No tags</option>';
                         availableTags.forEach(function (tag) {
                             var option = document.createElement('option');
                             option.value = tag;
@@ -300,7 +302,9 @@
                     var queryStartIndex = requestedStartIndex === undefined ? startIndex : requestedStartIndex;
                     var queryLimit = requestedLimit === undefined ? pageSize : requestedLimit;
                     var query = 'Items?search=' + encodeURIComponent(search.value || '')
-                        + '&tag=' + encodeURIComponent(tagFilter.value || '')
+                        + (tagFilter.value === noTagsFilterValue
+                            ? '&noTags=true'
+                            : '&tag=' + encodeURIComponent(tagFilter.value || ''))
                         + '&startIndex=' + queryStartIndex
                         + '&limit=' + queryLimit;
                     return ApiClient.getJSON(url(query)).then(function (result) {
