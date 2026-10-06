@@ -30,10 +30,28 @@
                 var search = document.querySelector('#TagSearch');
                 var status = document.querySelector('#TagStatus');
                 var availableTags = [];
+                var activePlayer = null;
+                var activePreviewButton = null;
                 var pageSize = 100;
                 var startIndex = 0;
                 var currentPage = 1;
                 var totalPages = 1;
+
+                function closePreview() {
+                    if (!activePlayer) {
+                        return;
+                    }
+
+                    activePlayer.pause();
+                    activePlayer.removeAttribute('src');
+                    activePlayer.load();
+                    activePlayer.remove();
+                    activePlayer = null;
+                    if (activePreviewButton) {
+                        activePreviewButton.textContent = 'Preview';
+                        activePreviewButton = null;
+                    }
+                }
 
                 function url(path) {
                     return ApiClient.getUrl('Plugins/TagManager/' + path);
@@ -80,14 +98,12 @@
                     preview.style.marginTop = '.75em';
                     preview.textContent = 'Preview';
                     preview.addEventListener('click', function () {
-                        var existingPlayer = body.querySelector('video');
-                        if (existingPlayer) {
-                            existingPlayer.pause();
-                            existingPlayer.remove();
-                            preview.textContent = 'Preview';
+                        if (activePreviewButton === preview) {
+                            closePreview();
                             return;
                         }
 
+                        closePreview();
                         var player = document.createElement('video');
                         player.controls = true;
                         player.tabIndex = 0;
@@ -102,6 +118,8 @@
                             status.textContent = 'Unable to play this video in the browser.';
                         });
                         body.insertBefore(player, tags);
+                        activePlayer = player;
+                        activePreviewButton = preview;
                         preview.textContent = 'Close preview';
                         player.focus();
                         player.play().catch(function () { });
@@ -268,6 +286,7 @@
                     var query = 'Items?search=' + encodeURIComponent(search.value || '') + '&startIndex=' + queryStartIndex + '&limit=' + queryLimit;
                     return ApiClient.getJSON(url(query)).then(function (result) {
                         if (!append) {
+                            closePreview();
                             items.innerHTML = '';
                         }
                         result.Items.forEach(renderItem);
@@ -334,6 +353,8 @@
                     status.textContent = 'Loading videos...';
                     loadTags().then(function () { return refreshItems(true); }).catch(showLoadError);
                 });
+
+                page.addEventListener('pagehide', closePreview);
 
                 document.querySelector('#TagSearchForm').addEventListener('submit', function (event) {
                     event.preventDefault();
