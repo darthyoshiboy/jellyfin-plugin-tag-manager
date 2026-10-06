@@ -5,15 +5,21 @@
     <title>Tag Manager</title>
 </head>
 <body>
-    <div id="TagManagerPage" data-role="page" class="page type-interior pluginConfigurationPage" data-require="emby-input,emby-button">
+    <div id="TagManagerPage" data-role="page" class="page type-interior pluginConfigurationPage" data-require="emby-input,emby-select,emby-button">
         <div data-role="content">
             <div class="content-primary">
                 <h1>Tag Manager</h1>
-                <p>Search videos, then select existing tags or add a new tag.</p>
+                <p>Search video titles or filter by an existing tag, then select existing tags or add a new tag.</p>
                 <form id="TagSearchForm">
                     <div class="inputContainer">
-                        <label class="inputLabel inputLabelUnfocused" for="TagSearch">Search videos</label>
+                        <label class="inputLabel inputLabelUnfocused" for="TagSearch">Search video titles</label>
                         <input id="TagSearch" type="search" is="emby-input" autocomplete="off">
+                    </div>
+                    <div class="selectContainer">
+                        <label class="selectLabel" for="TagFilter">Filter by tag</label>
+                        <select id="TagFilter" is="emby-select" class="emby-select">
+                            <option value="">All tags</option>
+                        </select>
                     </div>
                     <button is="emby-button" type="submit" class="raised emby-button"><span>Search</span></button>
                 </form>
@@ -28,6 +34,7 @@
                 var page = document.querySelector('#TagManagerPage');
                 var items = document.querySelector('#TagItems');
                 var search = document.querySelector('#TagSearch');
+                var tagFilter = document.querySelector('#TagFilter');
                 var status = document.querySelector('#TagStatus');
                 var availableTags = [];
                 var activePlayer = null;
@@ -59,7 +66,16 @@
 
                 function loadTags() {
                     return ApiClient.getJSON(url('Tags')).then(function (tags) {
+                        var selectedTag = tagFilter.value;
                         availableTags = tags;
+                        tagFilter.innerHTML = '<option value="">All tags</option>';
+                        availableTags.forEach(function (tag) {
+                            var option = document.createElement('option');
+                            option.value = tag;
+                            option.textContent = tag;
+                            tagFilter.appendChild(option);
+                        });
+                        tagFilter.value = selectedTag;
                     });
                 }
 
@@ -283,7 +299,10 @@
                 function loadItems(append, requestedStartIndex, requestedLimit) {
                     var queryStartIndex = requestedStartIndex === undefined ? startIndex : requestedStartIndex;
                     var queryLimit = requestedLimit === undefined ? pageSize : requestedLimit;
-                    var query = 'Items?search=' + encodeURIComponent(search.value || '') + '&startIndex=' + queryStartIndex + '&limit=' + queryLimit;
+                    var query = 'Items?search=' + encodeURIComponent(search.value || '')
+                        + '&tag=' + encodeURIComponent(tagFilter.value || '')
+                        + '&startIndex=' + queryStartIndex
+                        + '&limit=' + queryLimit;
                     return ApiClient.getJSON(url(query)).then(function (result) {
                         if (!append) {
                             closePreview();

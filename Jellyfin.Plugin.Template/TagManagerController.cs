@@ -51,21 +51,25 @@ public class TagManagerController : ControllerBase
     /// Searches library items for the tag editor.
     /// </summary>
     /// <param name="search">Optional title search.</param>
+    /// <param name="tag">Optional exact tag filter.</param>
     /// <param name="startIndex">The zero-based result offset.</param>
     /// <param name="limit">The maximum number of results to return.</param>
     /// <returns>Matching items and paging information.</returns>
     [HttpGet("Items")]
     public TagItemPage GetItems(
         [FromQuery] string? search = null,
+        [FromQuery] string? tag = null,
         [FromQuery] int startIndex = 0,
         [FromQuery] int limit = 100)
     {
         var normalizedSearch = search?.Trim();
+        var normalizedTag = tag?.Trim();
         var query = new InternalItemsQuery
         {
             Recursive = true,
             IncludeItemTypes = [BaseItemKind.Movie, BaseItemKind.Episode, BaseItemKind.Video, BaseItemKind.MusicVideo],
             NameContains = normalizedSearch,
+            Tags = normalizedTag is { Length: > 0 } ? [normalizedTag] : [],
             StartIndex = Math.Max(0, startIndex),
             Limit = Math.Clamp(limit, 1, 200),
             EnableTotalRecordCount = true
