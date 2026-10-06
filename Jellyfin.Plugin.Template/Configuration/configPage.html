@@ -7,16 +7,9 @@
 <body>
     <div id="TagManagerPage" data-role="page" class="page type-interior pluginConfigurationPage" data-require="emby-input,emby-button">
         <div data-role="content">
-            <div class="content-primary" style="padding-top: 6em">
-                <div id="TagSelectorDock" style="position: fixed; top: 0; left: 0; right: 0; z-index: 9999; box-sizing: border-box; padding: .75em max(1em, env(safe-area-inset-right)) .75em max(1em, env(safe-area-inset-left)); background-color: var(--theme-background, #181818); border-bottom: 1px solid rgba(127, 127, 127, .45); box-shadow: 0 4px 16px rgba(0, 0, 0, .2)">
-                    <div class="inputContainer" style="margin: 0">
-                        <label class="inputLabel inputLabelUnfocused" for="TagName">New or existing tag</label>
-                        <input id="TagName" list="UsedTags" type="text" is="emby-input" autocomplete="off">
-                        <datalist id="UsedTags"></datalist>
-                    </div>
-                </div>
+            <div class="content-primary">
                 <h1>Tag Manager</h1>
-                <p>Search videos, then add or remove tags. Previously used tags appear as suggestions.</p>
+                <p>Search videos, then select existing tags or add a new tag.</p>
                 <form id="TagSearchForm">
                     <div class="inputContainer">
                         <label class="inputLabel inputLabelUnfocused" for="TagSearch">Search videos</label>
@@ -33,13 +26,10 @@
         <script type="text/javascript">
             (function () {
                 var page = document.querySelector('#TagManagerPage');
-                var content = page.querySelector('.content-primary');
                 var items = document.querySelector('#TagItems');
                 var search = document.querySelector('#TagSearch');
-                var tagName = document.querySelector('#TagName');
-                var usedTags = document.querySelector('#UsedTags');
-                var tagSelectorDock = document.querySelector('#TagSelectorDock');
                 var status = document.querySelector('#TagStatus');
+                var availableTags = [];
                 var pageSize = 100;
                 var startIndex = 0;
                 var currentPage = 1;
@@ -51,12 +41,7 @@
 
                 function loadTags() {
                     return ApiClient.getJSON(url('Tags')).then(function (tags) {
-                        usedTags.innerHTML = '';
-                        tags.forEach(function (tag) {
-                            var option = document.createElement('option');
-                            option.value = tag;
-                            usedTags.appendChild(option);
-                        });
+                        availableTags = tags;
                     });
                 }
 
@@ -125,42 +110,153 @@
 
                     var tags = document.createElement('div');
                     tags.style.marginTop = '.5em';
-                    (item.Tags || []).forEach(function (tag) {
-                        var remove = document.createElement('button');
-                        remove.type = 'button';
-                        remove.className = 'raised emby-button';
-                        remove.style.marginRight = '.5em';
-                        remove.style.marginBottom = '.5em';
-                        remove.textContent = tag + '  x';
-                        remove.addEventListener('click', function () {
-                            ApiClient.ajax({ type: 'DELETE', url: url('Items/' + item.Id + '/Tags?tag=' + encodeURIComponent(tag)) })
-                                .then(function () { refreshItems(false); loadTags(); });
+                    var tagPrompt = document.createElement('div');
+                    tagPrompt.textContent = 'Select tags for this video:';
+                    tagPrompt.style.marginBottom = '.5em';
+                    tags.appendChild(tagPrompt);
+                    var tagChoices = document.createElement('div');
+                    tagChoices.style.display = 'flex';
+                    tagChoices.style.flexWrap = 'wrap';
+                    tagChoices.style.gap = '.5em';
+                    var currentTags = (item.Tags || []).slice();
+                    var selectedTags = currentTags.slice();
+                    var tagInputs = [];
+
+                    function hasTag(tagList, tag) {
+                        return tagList.some(function (existingTag) {
+                            return existingTag.toLowerCase() === tag.toLowerCase();
                         });
-                        tags.appendChild(remove);
+                    }
+
+                    availableTags.forEach(function (tag) {
+                        var label = document.createElement('label');
+                        label.style.display = 'inline-flex';
+                        label.style.alignItems = 'center';
+                        label.style.gap = '.35em';
+                        label.style.padding = '.25em .5em';
+                        label.style.border = '1px solid rgba(127,127,127,.45)';
+                        label.style.borderRadius = '.25em';
+
+                        var checkbox = document.createElement('input');
+                        checkbox.type = 'checkbox';
+                        checkbox.value = tag;
+                        checkbox.checked = hasTag(currentTags, tag);
+                        tagInputs.push(checkbox);
+                        label.appendChild(checkbox);
+                        label.appendChild(document.createTextNode(tag));
+                        tagChoices.appendChild(label);
                     });
+                    tags.appendChild(tagChoices);
+
+                    var apply = document.createElement('button');
+                    apply.type = 'button';
+                    apply.className = 'raised button-submit emby-button';
+                    apply.style.marginTop = '.5em';
+                    apply.textContent = 'Apply selected tags';
+                    apply.disabled = true;
+                    function updateApplyState() {
+                        apply.disabled = selectedTags.length === currentTags.length
+                            && selectedTags.every(function (tag) { return hasTag(currentTags, tag); });
+                    }
+                    tagInputs.forEach(function (checkbox) {
+                        checkbox.addEventListener('change', function () {
+                            selectedTags = tagInputs.filter(function (input) { return input.checked; })
+                                .map(function (input) { return input.value; });
+                            updateApplyState();
+                        });
+                    });
+                    apply.addEventListener('click', function () {
+                        var requests = [];
+                        selectedTags.filter(function (tag) { return !hasTag(currentTags, tag); }).forEach(function (tag) {
+                            requests.push(function () {
+                                return ApiClient.ajax({
+                                    type: 'POST',
+                                    url: url('Items/' + item.Id + '/Tags'),
+                                    data: JSON.stringify({ Tag: tag }),
+                                    contentType: 'application/json'
+                                });
+                            });
+                        });
+                        currentTags.filter(function (tag) { return !hasTag(selectedTags, tag); }).forEach(function (tag) {
+                            requests.push(function () {
+                                return ApiClient.ajax({
+                                    type: 'DELETE',
+                                    url: url('Items/' + item.Id + '/Tags?tag=' + encodeURIComponent(tag))
+                                });
+                            });
+                        });
+
+                        apply.disabled = true;
+                        tagInputs.forEach(function (checkbox) { checkbox.disabled = true; });
+                        status.textContent = 'Saving tags...';
+                        requests.reduce(function (promise, request) {
+                            return promise.then(request);
+                        }, Promise.resolve())
+                            .then(function () {
+                                status.textContent = 'Tags saved.';
+                                return loadTags().then(function () { return refreshItems(false); });
+                            })
+                            .catch(function (error) {
+                                tagInputs.forEach(function (checkbox) { checkbox.disabled = false; });
+                                updateApplyState();
+                                showTagSaveError(error);
+                            });
+                    });
+                    tags.appendChild(apply);
+
+                    var addTagForm = document.createElement('form');
+                    addTagForm.style.display = 'flex';
+                    addTagForm.style.flexWrap = 'wrap';
+                    addTagForm.style.alignItems = 'flex-end';
+                    addTagForm.style.gap = '.5em';
+                    addTagForm.style.marginTop = '.75em';
+
+                    var addTagInputContainer = document.createElement('div');
+                    addTagInputContainer.className = 'inputContainer';
+                    addTagInputContainer.style.flex = '1 1 12em';
+                    addTagInputContainer.style.margin = '0';
+                    var addTagInputId = 'NewTag-' + item.Id;
+                    var addTagLabel = document.createElement('label');
+                    addTagLabel.className = 'inputLabel inputLabelUnfocused';
+                    addTagLabel.htmlFor = addTagInputId;
+                    addTagLabel.textContent = 'New tag for this video';
+                    var addTagInput = document.createElement('input');
+                    addTagInput.id = addTagInputId;
+                    addTagInput.type = 'text';
+                    addTagInput.className = 'emby-input';
+                    addTagInput.autocomplete = 'off';
+                    addTagInputContainer.appendChild(addTagLabel);
+                    addTagInputContainer.appendChild(addTagInput);
+                    addTagForm.appendChild(addTagInputContainer);
 
                     var add = document.createElement('button');
-                    add.type = 'button';
+                    add.type = 'submit';
                     add.className = 'raised button-submit emby-button';
                     add.textContent = 'Add tag';
-                    add.addEventListener('click', function () {
-                        var value = tagName.value.trim();
+                    addTagForm.appendChild(add);
+                    addTagForm.addEventListener('submit', function (event) {
+                        event.preventDefault();
+                        var value = addTagInput.value.trim();
                         if (!value) {
                             status.textContent = 'Enter a tag first.';
                             return;
                         }
+                        add.disabled = true;
                         ApiClient.ajax({
                             type: 'POST',
                             url: url('Items/' + item.Id + '/Tags'),
                             data: JSON.stringify({ Tag: value }),
                             contentType: 'application/json'
                         }).then(function () {
+                            addTagInput.value = '';
                             status.textContent = 'Tag saved.';
-                            refreshItems(false);
-                            loadTags();
+                            return loadTags().then(function () { return refreshItems(false); });
+                        }).catch(function (error) {
+                            add.disabled = false;
+                            showTagSaveError(error);
                         });
                     });
-                    tags.appendChild(add);
+                    tags.appendChild(addTagForm);
                     body.appendChild(tags);
                     row.appendChild(body);
                     items.appendChild(row);
@@ -223,28 +319,21 @@
                     return loadItems(false);
                 }
 
-                function updateSelectorSpacing() {
-                    content.style.paddingTop = Math.ceil(tagSelectorDock.getBoundingClientRect().height + 12) + 'px';
-                }
-
                 function showLoadError(error) {
                     console.error('Tag Manager failed to load', error);
                     status.textContent = 'Unable to load videos. Check the Jellyfin server log.';
                 }
 
+                function showTagSaveError(error) {
+                    console.error('Tag Manager failed to save tags', error);
+                    status.textContent = 'Unable to save tags. Check the Jellyfin server log.';
+                }
+
                 page.addEventListener('pageshow', function () {
-                    document.documentElement.appendChild(tagSelectorDock);
-                    updateSelectorSpacing();
                     Dashboard.hideLoadingMsg();
                     status.textContent = 'Loading videos...';
-                    Promise.all([loadTags(), refreshItems(true)]).catch(showLoadError);
+                    loadTags().then(function () { return refreshItems(true); }).catch(showLoadError);
                 });
-
-                page.addEventListener('pagehide', function () {
-                    page.appendChild(tagSelectorDock);
-                });
-
-                window.addEventListener('resize', updateSelectorSpacing);
 
                 document.querySelector('#TagSearchForm').addEventListener('submit', function (event) {
                     event.preventDefault();
