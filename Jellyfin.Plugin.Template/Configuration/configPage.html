@@ -199,6 +199,9 @@
                             selectedTags = tagInputs.filter(function (input) { return input.checked; })
                                 .map(function (input) { return input.value; });
                             updateApplyState();
+                            if (activePlayer && !activePlayer.paused && !activePlayer.ended) {
+                                activePlayer.focus();
+                            }
                         });
                     });
                     apply.addEventListener('click', function () {
